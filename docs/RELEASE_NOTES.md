@@ -19,7 +19,7 @@ of the **unmodified upstream jar** — nothing is deleted from it, three of its 
 
 This is a **working but unfinished** adaptation of an upstream branch that stopped being maintained
 for 1.7.10. The honest summary — the full list is in
-[`KNOWN_ISSUES.md`](KNOWN_ISSUES.md):
+[`KNOWN_ISSUES.md`](https://github.com/Luoxueruoling/replaymod-gtnh-compat/blob/main/docs/KNOWN_ISSUES.md):
 
 * **A recording started after the world finished loading contains no terrain** (replays as sky only)
   and **no entry for the recording player**. ReplayMod only records what it sees when it sees it.
@@ -71,7 +71,7 @@ The jar should contain **6153 entries**; the upstream jar it was built from has 
 
 ## Building it yourself
 
-See [`BUILDING.md`](BUILDING.md). Rebuilding from the official upstream jar reproduces this build
+See [`BUILDING.md`](https://github.com/Luoxueruoling/replaymod-gtnh-compat/blob/main/docs/BUILDING.md). Rebuilding from the official upstream jar reproduces this build
 **entry for entry** (same 6153 entries, same size).
 
 ## Credits
@@ -83,6 +83,6 @@ RetroFuturaGradle, `javap`. Upstream ReplayMod is **MIT** by CrushedPixel and jo
 
 ## License
 
-MIT — see [`LICENSE`](../LICENSE) (may differ in path once uploaded). The upstream jar is not
+MIT — see [`LICENSE`](https://github.com/Luoxueruoling/replaymod-gtnh-compat/blob/main/LICENSE). The upstream jar is not
 redistributed in the repository; this release attaches a jar that contains it, with its original
 `LICENSE.txt` / `NOTICE.txt` kept inside.
