@@ -1,0 +1,9 @@
+# Normalize line endings for a cross-platform repository.
+# Everything textual is stored as LF; binaries are left alone.
+* text=auto eol=lf
+
+*.jar   binary
+*.png   binary
+*.jpg   binary
+*.lang  text eol=lf
+*.ps1   text eol=lf

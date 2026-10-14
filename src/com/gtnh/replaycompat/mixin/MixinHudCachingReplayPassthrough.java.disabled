@@ -1,0 +1,95 @@
+package com.gtnh.replaycompat.mixin;
+
+import com.replaymod.core.versions.MCVer;
+import com.replaymod.replay.camera.CameraEntity;
+
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+import java.lang.reflect.Method;
+
+/**
+ * Stops Angelica's HUD cache from swallowing the events ReplayMod needs to hide the vanilla HUD.
+ *
+ * <h3>Symptom</h3>
+ *
+ * <p>In a replay the vanilla HUD is still drawn - the health bar is the most visible one
+ * ("回放里还显示着血条"). ReplayMod is supposed to hide HEALTH/FOOD/ARMOR/AIR/HOTBAR/EXPERIENCE/...
+ * from {@code CameraEntity$EventHandler#preRenderGameOverlay} by cancelling
+ * {@code RenderGameOverlayEvent.Pre}.
+ *
+ * <h3>Root cause</h3>
+ *
+ * <p>Angelica renders the HUD into a framebuffer and, while that cache is valid, returns early from
+ * the HUD methods so the real {@code GuiIngame} code - and therefore the Forge
+ * {@code RenderGameOverlayEvent} dispatch inside it - never runs:
+ *
+ * <pre>
+ *   HUDCachingEarlyReturnTransformer  injects at the head of the HUD methods:
+ *       if (HUDCaching$HUDCachingHooks.shouldReturnEarly()) return;
+ *
+ *   HUDCaching$HUDCachingHooks.shouldReturnEarly():
+ *       return HUDCaching.renderingCacheOverride;      // and in cached frames that is true
+ * </pre>
+ *
+ * <p>So ReplayMod's {@code setCanceled(true)} is never delivered and the cached HUD (health bar and
+ * friends) keeps being blitted.
+ *
+ * <h3>Fix</h3>
+ *
+ * <p>While a replay is being viewed - i.e. the render view entity is ReplayMod's
+ * {@code CameraEntity} - report {@code false} from {@code shouldReturnEarly}, so the HUD is rendered
+ * normally every frame and the ordinary {@code RenderGameOverlayEvent} flow (which ReplayMod already
+ * hooks) does its job. Outside replays nothing changes, so the cache keeps working for normal play.
+ *
+ * <p>The cost is only that the HUD is not cached during a replay, where ReplayMod cancels most of it
+ * anyway. Angelica is not remapped by Forge, so the real names are used with {@code remap = false};
+ * {@code require = 0} makes this a no-op on Angelica versions without the hook.
+ */
+@Mixin(targets = "com.gtnewhorizons.angelica.hudcaching.HUDCaching$HUDCachingHooks")
+public abstract class MixinHudCachingReplayPassthrough {
+
+    private static Method getMinecraft;
+    private static boolean resolved;
+
+    @Inject(method = "shouldReturnEarly", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    private static void replaycompat$noHudCacheDuringReplay(CallbackInfoReturnable<Boolean> cir) {
+        try {
+            if (replaycompat$isReplay()) {
+                cir.setReturnValue(false);
+            }
+        } catch (Throwable ignored) {
+            // Any failure at all leaves Angelica's behaviour untouched.
+        }
+    }
+
+    private static boolean replaycompat$isReplay() throws Exception {
+        if (!resolved) {
+            resolved = true;
+            try {
+                Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
+                for (String name : new String[] { "getMinecraft", "func_71410_x" }) {
+                    try {
+                        getMinecraft = mcClass.getMethod(name);
+                        break;
+                    } catch (NoSuchMethodException ignored) {
+                        // try the next spelling
+                    }
+                }
+            } catch (Throwable t) {
+                getMinecraft = null;
+            }
+        }
+        if (getMinecraft == null) {
+            return false;
+        }
+        Object mc = getMinecraft.invoke(null);
+        if (mc == null) {
+            return false;
+        }
+        Object view = MCVer.getRenderViewEntity((net.minecraft.client.Minecraft) mc);
+        return view instanceof CameraEntity;
+    }
+}

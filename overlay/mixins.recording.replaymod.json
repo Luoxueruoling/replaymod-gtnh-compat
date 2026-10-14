@@ -1,0 +1,38 @@
+{
+  "required": true,
+  "package": "com.replaymod.recording.mixin",
+  "mixins": [],
+  "server": [],
+  "client": [
+    "AddServerScreenAccessor",
+    "EntityLivingBaseAccessor",
+    "IntegratedServerAccessor",
+    "NetworkManagerAccessor",
+    "SPacketSpawnMobAccessor",
+    "SPacketSpawnPlayerAccessor",
+    "MixinServerInfo",
+    //#if MC>=11400
+    //$$ "MixinDownloadingPackFinder",
+    //$$ "MixinMouseHelper",
+    //#endif
+    //#if MC>=10904
+    //#if MC<11400
+    //$$ "MixinPlayerControllerMP",
+    //#endif
+    //$$ "MixinWorldClient",
+    //#endif
+    //#if MC<=10710
+    
+    "MixinS26PacketMapChunkBulk",
+    //#endif
+    "MixinNetHandlerLoginClient",
+    "MixinNetHandlerPlayClient",
+    //#if MC<11400
+    "MixinNetworkDispatcher",
+    //#endif
+    "MixinRenderGlobal"
+  ],
+  "compatibilityLevel": "JAVA_8",
+  "minVersion": "0.6.11",
+  "refmap": "mixins.replaymod.refmap.json"
+}

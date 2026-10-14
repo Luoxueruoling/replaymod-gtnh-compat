@@ -1,0 +1,26 @@
+# Build output & local dependencies — never commit these
+mixin-out/
+build/
+out/
+dist/
+
+# The upstream jar and any produced jar (you supply the upstream one yourself)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# Local dependency drop folder
+deps/
+libs/*.jar
+
+# Logs, probes and scratch
+*.log
+*.class
+*.mcpr
+*.zip
+
+# OS / editor noise
+Thumbs.db
+.DS_Store
+.idea/
+.vscode/
+*.swp

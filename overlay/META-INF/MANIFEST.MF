@@ -1,0 +1,11 @@
+Manifest-Version: 1.0
+TweakClass: org.spongepowered.asm.launch.MixinTweaker
+FMLCorePluginContainsFMLMod: true
+FMLAT: replaymod_at.cfg
+ForceLoadAsMod: true
+MixinConfigs: mixins.core.replaymod.json,mixins.recording.replaymod.json
+ ,mixins.render.replaymod.json,mixins.replay.replaymod.json,mixins.compa
+ t.shaders.replaymod.json,mixins.extras.playeroverview.replaymod.json,mi
+ xins.jgui.json,mixins.compat.mapwriter.replaymod.json,mixins.render.ble
+ nd.replaymod.json,mixins.replaycompat.json
+FMLCorePlugin: com.gtnh.replaycompat.ReplayModTransformers

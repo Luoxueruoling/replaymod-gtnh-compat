@@ -1,0 +1,142 @@
+package com.gtnh.replaycompat.mixin;
+
+import com.replaymod.core.versions.MCVer;
+import com.replaymod.replay.ReplayModReplay;
+import com.replaymod.replay.camera.CameraEntity;
+
+import net.minecraft.client.Minecraft;
+
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.lang.reflect.Method;
+
+/**
+ * Hides the vanilla HUD elements <b>only while the replay's free camera is in use</b> - so that
+ * spectating a player shows that player's UI instead of a blank screen.
+ *
+ * <h3>The intended behaviour (upstream semantics)</h3>
+ *
+ * <pre>
+ *   free camera (renderViewEntity == CameraEntity)  -&gt; hide hand, hide HUD
+ *   spectating a player                             -&gt; show that player's hand AND their HUD
+ * </pre>
+ *
+ * <p>ReplayMod expresses exactly this for the hand
+ * ({@code onRenderHand}: cancel unless the view entity is a spectated player), and the user asked for
+ * the same for the HUD: "旁观某个玩家后，想看 … 血条和快捷栏和那个玩家的所有 UI".
+ *
+ * <p>An earlier version cancelled the elements whenever a replay was open, which blanked the UI while
+ * spectating as well. The condition here is therefore based on the view entity, not merely on "a replay
+ * is open".
+ *
+ * <h3>Known 1.7.10 limitation</h3>
+ *
+ * <p>The hotbar can genuinely reflect the spectated player - ReplayMod's
+ * {@code onRenderHandMonitor} pushes that player's {@code inventory.getCurrentItem()} into the
+ * {@code ItemRenderer}. The health/food/air bars, however, are drawn from {@code mc.thePlayer}, and on
+ * 1.7.10 ReplayMod never replaces {@code mc.thePlayer} with the replay camera (verified: the shipped jar
+ * contains only {@code getfield} for that field, and there is no {@code setThePlayer} anywhere), so
+ * those bars show the values of the client player, not of the spectated one. Making them show the
+ * spectated player's values would require swapping {@code mc.thePlayer}, which would break far more than
+ * it fixes.
+ *
+ * <h3>Why not just cancel {@code renderGameOverlay}</h3>
+ *
+ * <p>Tried previously: it also removed ReplayMod's own timeline/buttons, because jGui renders its overlay
+ * from the same {@code RenderGameOverlayEvent} dispatch. Individual elements only.
+ */
+@Mixin(targets = "net.minecraftforge.client.GuiIngameForge")
+public abstract class MixinHideHudElementsInReplay {
+
+    private static Method getMinecraft;
+    private static Method getReplayHandler;
+    private static Object replayModReplayInstance;
+    private static boolean resolved;
+    private static boolean warned;
+
+    /** All of these share the descriptor {@code (II)V}. */
+    @Inject(method = {
+            "renderHealth",
+            "renderFood",
+            "renderArmor",
+            "renderAir",
+            "renderExperience",
+            "renderJumpBar",
+            "renderHUDText"
+    }, at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    private void replaycompat$hideHudElement(int width, int height, CallbackInfo ci) {
+        replaycompat$cancelIfFreeCamera(ci);
+    }
+
+    @Inject(method = "renderHotbar", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    private void replaycompat$hideHotbar(int width, int height, float partialTicks, CallbackInfo ci) {
+        replaycompat$cancelIfFreeCamera(ci);
+    }
+
+    @Inject(method = "renderBossHealth", at = @At("HEAD"), cancellable = true, remap = false, require = 0)
+    private void replaycompat$hideBossHealth(CallbackInfo ci) {
+        replaycompat$cancelIfFreeCamera(ci);
+    }
+
+    private static void replaycompat$cancelIfFreeCamera(CallbackInfo ci) {
+        try {
+            if (replaycompat$isFreeCameraInReplay()) {
+                ci.cancel();
+            }
+        } catch (Throwable t) {
+            if (!warned) {
+                warned = true;
+                try {
+                    System.out.println("[replaycompat] hud element guard failed: " + t);
+                } catch (Throwable ignored) {
+                    // logging must never escape
+                }
+            }
+        }
+    }
+
+    /** True only for "a replay is open AND the view entity is the replay's own free camera". */
+    private static boolean replaycompat$isFreeCameraInReplay() throws Exception {
+        replaycompat$resolve();
+        if (getMinecraft == null || getReplayHandler == null || replayModReplayInstance == null) {
+            return false; // cannot tell -> do not interfere
+        }
+        if (getReplayHandler.invoke(replayModReplayInstance) == null) {
+            return false; // not in a replay
+        }
+        Object mc = getMinecraft.invoke(null);
+        if (mc == null) {
+            return false;
+        }
+        Object view = MCVer.getRenderViewEntity((Minecraft) mc);
+        return view instanceof CameraEntity;
+    }
+
+    private static void replaycompat$resolve() {
+        if (resolved) {
+            return;
+        }
+        resolved = true;
+        try {
+            Class<?> mcClass = Class.forName("net.minecraft.client.Minecraft");
+            for (String name : new String[] { "getMinecraft", "func_71410_x" }) {
+                try {
+                    getMinecraft = mcClass.getMethod(name);
+                    break;
+                } catch (NoSuchMethodException ignored) {
+                    // try the next spelling
+                }
+            }
+            Class<?> replayModReplay = Class.forName("com.replaymod.replay.ReplayModReplay");
+            getReplayHandler = replayModReplay.getMethod("getReplayHandler");
+            replayModReplayInstance = replayModReplay.getField("instance").get(null);
+        } catch (Throwable t) {
+            getMinecraft = null;
+            getReplayHandler = null;
+            replayModReplayInstance = null;
+        }
+    }
+}
