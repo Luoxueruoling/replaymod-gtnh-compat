@@ -69,6 +69,8 @@ Get-FileHash .\replaymod-1.7.10-2.5.2-gtnh.jar -Algorithm SHA256
 
 The jar should contain **6153 entries**; the upstream jar it was built from has 6101.
 
+> **Entry-count note:** 6153 is the number of *unique* entry names. The raw ZipArchive.Entries.Count` is **6154** here (and 6102 for the upstream jar), because the upstream jar itself ships a **duplicated ssets/ directory entry**. Both numbers are +52 over upstream - just compare like with like.
+
 ## Building it yourself
 
 See [`BUILDING.md`](https://github.com/Luoxueruoling/replaymod-gtnh-compat/blob/main/docs/BUILDING.md). Rebuilding from the official upstream jar reproduces this build

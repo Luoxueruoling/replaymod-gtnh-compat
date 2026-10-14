@@ -117,6 +117,8 @@ $patched  = Ent '.\dist\replaymod-1.7.10-2.5.2-gtnh.jar'
 Rebuilding from the official upstream jar reproduces the released jar **exactly**:
 
 * same **6153 entries** (upstream has 6101) and the same file size (**10880577 bytes**);
+
+> **Entry-count note:** 6153 is the number of *unique* entry names. The raw ZipArchive.Entries.Count` is **6154** here (and 6102 for the upstream jar), because the upstream jar itself ships a **duplicated ssets/ directory entry**. Both numbers are +52 over upstream - just compare like with like.
 * all **51** `com/gtnh/replaycompat/**` classes are **byte-for-byte identical** to the released build
   (verified by SHA-256 per class).
 
